@@ -43,6 +43,28 @@ class TabData {
 
   TabData({required this.entries, required this.history, required this.finalReturn, required this.finalDate});
 
+  // DEEP COPY: Create completely independent copy
+  TabData copyWith({
+    List<CashEntry>? entries,
+    List<XirrResult>? history,
+    double? finalReturn,
+    DateTime? finalDate,
+  }) {
+    return TabData(
+      entries: entries ?? this.entries.map((e) => CashEntry(
+        date: DateTime.fromMillisecondsSinceEpoch(e.date.millisecondsSinceEpoch),
+        amount: e.amount,
+      )).toList(),
+      history: history ?? this.history.map((h) => XirrResult(
+        value: h.value,
+        finalReturn: h.finalReturn,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(h.timestamp.millisecondsSinceEpoch),
+      )).toList(),
+      finalReturn: finalReturn ?? this.finalReturn,
+      finalDate: finalDate ?? DateTime.fromMillisecondsSinceEpoch(this.finalDate.millisecondsSinceEpoch),
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'entries': entries.map((e) => e.toJson()).toList(),
     'history': history.map((e) => e.toJson()).toList(),

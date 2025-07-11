@@ -1,0 +1,4 @@
+Not searching for unused variables given on the command line.
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /Users/suragsunil/AndroidStudioProjects/xirr_app/android/app/.cxx/RelWithDebInfo/6f3v442r/armeabi-v7a

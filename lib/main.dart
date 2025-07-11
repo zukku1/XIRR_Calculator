@@ -28,10 +28,9 @@ class MultiXirrHomePage extends StatefulWidget {
   MultiXirrHomePageState createState() => MultiXirrHomePageState();
 }
 
-class MultiXirrHomePageState extends State<MultiXirrHomePage> with TickerProviderStateMixin {
+class MultiXirrHomePageState extends State<MultiXirrHomePage> {
   List<TabData> tabsData = [];
   List<String> tabNames = [];
-  TabController? _tabController;
   int currentTabIndex = 0;
   bool isLoading = true; // Change: Add loading state
 
@@ -87,13 +86,11 @@ class MultiXirrHomePageState extends State<MultiXirrHomePage> with TickerProvide
         ];
         tabNames = ["Main"];
       }
-      _tabController = TabController(length: tabsData.length, vsync: this);
     } catch (e) {
       // CHANGE: Handle any other errors and provide default state
       print('Error loading tabs: $e');
       tabsData = [TabData(entries: [], history: [], finalReturn: 0.0, finalDate: DateTime.now())];
       tabNames = ["Main"];
-      _tabController = TabController(length: 1, vsync: this);
     }
     setState(() {});
   }
@@ -111,11 +108,9 @@ class MultiXirrHomePageState extends State<MultiXirrHomePage> with TickerProvide
       tabsData.add(TabData(entries: [], history: [], finalReturn: 0.0, finalDate: DateTime.now()));
       tabNames.add(name);
       currentTabIndex = tabsData.length - 1;
-      _tabController?.dispose();        //Dispose old controller before creating new one
-      _tabController = TabController(length: tabsData.length, vsync: this);
-      _tabController!.index = currentTabIndex;
     });
     _saveTabs();
+    Navigator.of(context).pop();
   }
 
   Future<String> _askName() async {
@@ -133,6 +128,26 @@ class MultiXirrHomePageState extends State<MultiXirrHomePage> with TickerProvide
     ) ?? "Calculator";
   }
 
+  Future<bool> _confirmDelete(String calculatorName) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Delete Calculator"),
+        content: Text("Are you sure you want to delete '$calculatorName'?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
   void _deleteTab(int index) async {
     if (tabsData.length <= 1) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -141,72 +156,156 @@ class MultiXirrHomePageState extends State<MultiXirrHomePage> with TickerProvide
       return;
     }
 
+    bool confirmed = await _confirmDelete(tabNames[index]);
+    if (!confirmed) return;
+
     setState(() {
       tabsData.removeAt(index);
       tabNames.removeAt(index);
       if (currentTabIndex >= tabsData.length) {
         currentTabIndex = tabsData.length - 1;
       }
-      _tabController?.dispose();
-      _tabController = TabController(length: tabsData.length, vsync: this);
-      _tabController!.index = currentTabIndex;
     });
     _saveTabs();
+    Navigator.of(context).pop();
+  }
+
+  void _selectCalculator(int index) {
+    setState(() {
+      currentTabIndex = index;
+    });
+    Navigator.of(context).pop(); // Close drawer
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-        return Scaffold(
-          appBar: AppBar(title: Text("XIRR Calculator")),
-          body: Center(child: CircularProgressIndicator())
-        );
+      return Scaffold(
+        appBar: AppBar(title: Text("XIRR Calculator")),
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
-
-    return DefaultTabController(
-      length: tabsData.length,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text("XIRR Calculator"),
-          bottom: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            tabs: [
-              for (int i = 0; i < tabNames.length; i++)
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(tabNames[i]),
-                      SizedBox(width: 4),
-                      GestureDetector(
-                        onTap: () => _deleteTab(i),
-                        child: Icon(Icons.close, size: 14),
-                      )
-                    ],
-                  ),
-                )
-            ],
-            onTap: (i) => setState(() => currentTabIndex = i),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("XIRR Calculator - ${tabNames[currentTabIndex]}"),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
           ),
-          actions: [IconButton(icon: Icon(Icons.add), onPressed: _addTab)],
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: tabsData.asMap().entries.map((entry) {
-            int index = entry.key;
-            TabData data = entry.value;
-            return XirrHomePage(
-              tabData: data,
-              onDataChanged: (updatedData) {
-                setState(() {
-                  tabsData[index] = updatedData;
-                });
-                _saveTabs();
-              },
-            );
-          }).toList(),
+      ),
+      drawer: Drawer(
+        child: Column(
+          children: [
+            // Drawer Header
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.blue,
+              ),
+              child: Container(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.calculate,
+                      color: Colors.white,
+                      size: 48,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'XIRR Calculators',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '${tabNames.length} calculator${tabNames.length > 1 ? 's' : ''}',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Calculator List
+            Expanded(
+              child: ListView.builder(
+                itemCount: tabNames.length,
+                itemBuilder: (context, index) {
+                  bool isSelected = index == currentTabIndex;
+                  return Container(
+                    color: isSelected ? Colors.blue.withOpacity(0.1) : null,
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.calculate_outlined,
+                        color: isSelected ? Colors.blue : Colors.grey[600],
+                      ),
+                      title: Text(
+                        tabNames[index],
+                        style: TextStyle(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? Colors.blue : null,
+                        ),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isSelected)
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.blue,
+                              size: 20,
+                            ),
+                          SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(
+                              Icons.delete_outline,
+                              color: Colors.red[400],
+                              size: 20,
+                            ),
+                            onPressed: () => _deleteTab(index),
+                          ),
+                        ],
+                      ),
+                      onTap: () => _selectCalculator(index),
+                    ),
+                  );
+                },
+              ),
+            ),
+            // Add New Calculator Button
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: Icon(Icons.add),
+                  label: Text('Add New Calculator'),
+                  onPressed: _addTab,
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
+      ),
+      body: XirrHomePage(
+        tabData: tabsData[currentTabIndex],
+        onDataChanged: (updatedData) {
+          setState(() {
+            tabsData[currentTabIndex] = updatedData;
+          });
+          _saveTabs();
+        },
       ),
     );
   }

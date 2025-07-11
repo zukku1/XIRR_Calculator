@@ -28,20 +28,45 @@ class XirrHomePageState extends State<XirrHomePage> {
     _loadFromTabData();
   }
 
+  @override
+  void didUpdateWidget(XirrHomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // CHANGE: Reload data when switching between calculators
+    if (oldWidget.tabData != widget.tabData) {
+      _loadFromTabData();
+    }
+  }
+
   void _loadFromTabData() {
-    entries = List.from(widget.tabData.entries);
-    history = List.from(widget.tabData.history);
+    entries = widget.tabData.entries.map((entry) => CashEntry(
+      date: DateTime.fromMillisecondsSinceEpoch(entry.date.millisecondsSinceEpoch),
+      amount: entry.amount,
+    )).toList();
+
+    history = widget.tabData.history.map((result) => XirrResult(
+      value: result.value,
+      finalReturn: result.finalReturn,
+      timestamp: DateTime.fromMillisecondsSinceEpoch(result.timestamp.millisecondsSinceEpoch),
+    )).toList();
+
     finalReturn = widget.tabData.finalReturn;
-    finalDate = widget.tabData.finalDate;
+    finalDate = DateTime.fromMillisecondsSinceEpoch(widget.tabData.finalDate.millisecondsSinceEpoch);
     setState(() {});
   }
 
   void _notifyDataChanged() {
     widget.onDataChanged(TabData(
-      entries: entries,
-      history: history,
+      entries: entries.map((entry) => CashEntry(
+        date: DateTime.fromMillisecondsSinceEpoch(entry.date.millisecondsSinceEpoch),
+        amount: entry.amount,
+      )).toList(),
+      history: history.map((result) => XirrResult(
+        value: result.value,
+        finalReturn: result.finalReturn,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(result.timestamp.millisecondsSinceEpoch),
+      )).toList(),
       finalReturn: finalReturn,
-      finalDate: finalDate,
+      finalDate: DateTime.fromMillisecondsSinceEpoch(finalDate.millisecondsSinceEpoch),
     ));
   }
 
@@ -118,7 +143,7 @@ class XirrHomePageState extends State<XirrHomePage> {
       double xirr = computeXirr();
       setState(() {
         result = xirr;
-        history.add(XirrResult(value: xirr, finalReturn: finalReturn, timestamp: DateTime.now()));
+        history.add(XirrResult(value: xirr, finalReturn: finalReturn, timestamp: finalDate));
         history.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       });
       _notifyDataChanged();
