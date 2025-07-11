@@ -9400,6 +9400,7 @@ com.example.xirr_app.R$drawable
 com.example.xirr_app.R$mipmap
 com.example.xirr_app.R$style
 com.example.xirr_app.R
+com.example.xirr_calculator.MainActivity
 com.getkeepsafe.relinker.ApkLibraryInstaller:
     private static final int COPY_BUFFER_SIZE
     private static final int MAX_TRIES
